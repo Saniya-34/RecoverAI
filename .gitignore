@@ -1,0 +1,45 @@
+# .gitignore for RecoverAI project
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.env
+*.env.*
+
+# Virtual environment
+venv/
+.venv/
+.env
+
+# Poetry / Pipenv files
+poetry.lock
+Pipfile.lock
+
+# FastAPI / Uvicorn logs
+logs/
+*.log
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+node_modules/
+
+# Build artifacts
+dist/
+build/
+
+# Docker compose override files
+docker-compose.override.yml
+
+# Alembic versions (generated migrations)
+alembic/versions/*
+
+# Environment files (already covered)
+# .env is ignored above

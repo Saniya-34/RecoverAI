@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:17
+    container_name: recoverai_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: recoverai
+      POSTGRES_USER: recoverai_user
+      POSTGRES_PASSWORD: recoverai_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "recoverai_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    name: postgres_data
