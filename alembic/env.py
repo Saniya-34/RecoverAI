@@ -1,42 +1,70 @@
-from logging.config import fileConfig
+"""
+alembic/env.py
+
+Alembic migration environment.
+
+Supports both offline (SQL generation) and online (live DB) modes.
+DATABASE_URL is read from backend/.env — never hardcoded.
+"""
+
+# ── Standard library ──────────────────────────────────────────────────────────
 import os
 import sys
-from sqlalchemy import engine_from_config, pool
+from logging.config import fileConfig
+from pathlib import Path
+
+# ── Third-party ───────────────────────────────────────────────────────────────
 from alembic import context
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, pool
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
-config = context.config
+# ── Project bootstrap ─────────────────────────────────────────────────────────
+# Add the project root to sys.path so `backend.*` imports resolve correctly
+# regardless of where alembic is invoked from.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+# Load DATABASE_URL from backend/.env before any SQLAlchemy code runs.
+load_dotenv(PROJECT_ROOT / "backend" / ".env")
 
-# Add the project directory to sys.path, so the model's MetaData can be imported.
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# ── Application imports ───────────────────────────────────────────────────────
+# DeclarativeBase lives here; Base.metadata is the source of truth for Alembic.
+from backend.app.database import Base  # noqa: E402
 
-# Import your model's Base object for "autogenerate" support
-from backend.app.database import Base
+# Side-effect: registers every ORM model with Base.metadata.
+# Without this import Alembic would detect no tables and generate empty migrations.
+import backend.app.models  # noqa: F401, E402
+
+# ── Alembic configuration ─────────────────────────────────────────────────────
+alembic_cfg = context.config
+
+if alembic_cfg.config_file_name is not None:
+    fileConfig(alembic_cfg.config_file_name)
 
 target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired here.
 
-def run_migrations_offline():
-    """Run migrations in "offline" mode.
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-    Calls to context.execute() here emit the given
-    string to the script output.
+def _get_database_url() -> str:
+    url = os.getenv("DATABASE_URL")
+    if not url:
+        raise RuntimeError(
+            "DATABASE_URL is not set. "
+            "Ensure backend/.env exists and contains a valid DATABASE_URL."
+        )
+    return url
+
+
+# ── Offline migrations ────────────────────────────────────────────────────────
+
+def run_migrations_offline() -> None:
     """
-    url = config.get_main_option("sqlalchemy.url")
+    Generate SQL migration scripts without a live database connection.
+    Useful for reviewing changes before applying them.
+    """
     context.configure(
-        url=url,
+        url=_get_database_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -46,15 +74,15 @@ def run_migrations_offline():
         context.run_migrations()
 
 
-def run_migrations_online():
-    """Run migrations in "online" mode.
+# ── Online migrations ─────────────────────────────────────────────────────────
 
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
+def run_migrations_online() -> None:
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix="sqlalchemy.",
+    Apply migrations against a live PostgreSQL instance.
+    Uses NullPool so connections are not cached between migration runs.
+    """
+    connectable = create_engine(
+        _get_database_url(),
         poolclass=pool.NullPool,
     )
 
@@ -63,9 +91,11 @@ def run_migrations_online():
             connection=connection,
             target_metadata=target_metadata,
         )
-
         with context.begin_transaction():
             context.run_migrations()
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
 
 if context.is_offline_mode():
     run_migrations_offline()
