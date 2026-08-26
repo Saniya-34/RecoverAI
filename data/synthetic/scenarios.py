@@ -629,6 +629,120 @@ class SyntheticDataGenerator:
 
     # ── Public entry point ────────────────────────────────────────────────────
 
+    def _build_test_cases(self) -> None:
+        """
+        Creates 3 open recovery cases for manual testing of the recovery agent.
+        """
+        # Customer 1: 7 previous attempts (all SUCCESS).
+        # Total attempts = 8. Successful = 7. Success rate = 87.5%.
+        # Current failure: bank_timeout, amount ₹1,999.
+        c1_id = self._cust_id()
+        c1 = SyntheticCustomer(
+            external_customer_id=c1_id,
+            name="Test Customer Recovery One",
+            email="test_recovery_one@example.com",
+            phone="+919876543210",
+            created_at=self._ago(60),
+            scenario_tag="TEST_RECOVERY_CASE",
+            ground_truth="RECOVERABLE",
+        )
+        self.dataset.customers.append(c1)
+        self._customer_index[c1_id] = c1
+
+        # 7 historical successful orders & payments
+        for h in range(7):
+            old_order = self._add_order(c1, "PAID", amount=Decimal("1999.00"), days_ago=45 - h * 5)
+            self._add_payment(old_order, c1, "SUCCESS", days_ago=45 - h * 5, hours_offset=1)
+            self._add_checkout_events(c1, old_order, "success", days_ago=45 - h * 5)
+
+        # Current failing order & payment
+        fail_order1 = self._add_order(c1, "FAILED", amount=Decimal("1999.00"), days_ago=1)
+        fail_pay1 = self._add_payment(
+            fail_order1, c1, "FAILED",
+            failure_reason="bank_timeout",
+            days_ago=1, hours_offset=1,
+        )
+        self._add_checkout_events(c1, fail_order1, "fail", days_ago=1)
+        self._add_recovery_case(
+            c1, fail_order1, fail_pay1,
+            "PAYMENT_FAILURE", "OPEN", "RECOVERABLE", days_ago=1
+        )
+
+        # Customer 2: 8 previous attempts (7 SUCCESS, 1 FAILED).
+        # Total attempts = 9. Successful = 7. Success rate = 77.8%.
+        # Current failure: temporary_bank_error, amount ₹2,499.
+        c2_id = self._cust_id()
+        c2 = SyntheticCustomer(
+            external_customer_id=c2_id,
+            name="Test Customer Recovery Two",
+            email="test_recovery_two@example.com",
+            phone="+919876543211",
+            created_at=self._ago(70),
+            scenario_tag="TEST_RECOVERY_CASE",
+            ground_truth="RECOVERABLE",
+        )
+        self.dataset.customers.append(c2)
+        self._customer_index[c2_id] = c2
+
+        # 7 SUCCESS in history
+        for h in range(7):
+            old_order = self._add_order(c2, "PAID", amount=Decimal("2499.00"), days_ago=55 - h * 6)
+            self._add_payment(old_order, c2, "SUCCESS", days_ago=55 - h * 6, hours_offset=1)
+            self._add_checkout_events(c2, old_order, "success", days_ago=55 - h * 6)
+
+        # 1 FAILED in history
+        old_failed_order = self._add_order(c2, "FAILED", amount=Decimal("2499.00"), days_ago=10)
+        self._add_payment(old_failed_order, c2, "FAILED", failure_reason="network_error", days_ago=10, hours_offset=1)
+        self._add_checkout_events(c2, old_failed_order, "fail", days_ago=10)
+
+        # Current failing order & payment
+        fail_order2 = self._add_order(c2, "FAILED", amount=Decimal("2499.00"), days_ago=1)
+        fail_pay2 = self._add_payment(
+            fail_order2, c2, "FAILED",
+            failure_reason="temporary_bank_error",
+            days_ago=1, hours_offset=1,
+        )
+        self._add_checkout_events(c2, fail_order2, "fail", days_ago=1)
+        self._add_recovery_case(
+            c2, fail_order2, fail_pay2,
+            "PAYMENT_FAILURE", "OPEN", "RECOVERABLE", days_ago=1
+        )
+
+        # Customer 3: 5 previous attempts (5 SUCCESS).
+        # Total attempts = 6. Successful = 5. Success rate = 83.3%.
+        # Current failure: gateway_timeout, amount ₹1,999.
+        c3_id = self._cust_id()
+        c3 = SyntheticCustomer(
+            external_customer_id=c3_id,
+            name="Test Customer Recovery Three",
+            email="test_recovery_three@example.com",
+            phone="+919876543212",
+            created_at=self._ago(50),
+            scenario_tag="TEST_RECOVERY_CASE",
+            ground_truth="RECOVERABLE",
+        )
+        self.dataset.customers.append(c3)
+        self._customer_index[c3_id] = c3
+
+        # 5 SUCCESS in history
+        for h in range(5):
+            old_order = self._add_order(c3, "PAID", amount=Decimal("1999.00"), days_ago=35 - h * 6)
+            self._add_payment(old_order, c3, "SUCCESS", days_ago=35 - h * 6, hours_offset=1)
+            self._add_checkout_events(c3, old_order, "success", days_ago=35 - h * 6)
+
+        # Current failing order & payment
+        fail_order3 = self._add_order(c3, "FAILED", amount=Decimal("1999.00"), days_ago=1)
+        fail_pay3 = self._add_payment(
+            fail_order3, c3, "FAILED",
+            failure_reason="gateway_timeout",
+            days_ago=1, hours_offset=1,
+        )
+        self._add_checkout_events(c3, fail_order3, "fail", days_ago=1)
+        self._add_recovery_case(
+            c3, fail_order3, fail_pay3,
+            "PAYMENT_FAILURE", "OPEN", "RECOVERABLE", days_ago=1
+        )
+
     def generate(self) -> SyntheticDataset:
         """
         Run all scenario builders and return the complete dataset.
@@ -647,6 +761,7 @@ class SyntheticDataGenerator:
         self._build_s10_stale_abandonment(n=5)
         self._build_s11_mixed_history(n=10)
         self._build_s12_purely_successful(n=10)
+        self._build_test_cases()
         return self.dataset
 
 

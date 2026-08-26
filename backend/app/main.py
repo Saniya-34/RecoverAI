@@ -5,13 +5,18 @@ FastAPI application factory.
 
 Registers:
     - CORS middleware (permits the React dev server at localhost:5173)
-    - /health          (Stage 1)
-    - /api/events      (Stage 4 — merchant event ingestion)
-    - /api/recovery-cases  (Stage 4 — recovery case read API)
+    - /             → redirect to /docs
+    - /health       (Stage 1)
+    - /api/dashboard/summary   (Stage 6)
+    - /api/events              (Stage 4)
+    - /api/recovery-cases      (Stage 4)
+    - /api/recovery-cases/{id}/audit  (Stage 6)
+    - /api/recovery-cases/{id}/run-agent (Stage 5)
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse, Response
 
 # Side-effect import: registers all ORM models with Base.metadata so
 # Alembic can introspect the schema without extra configuration.
@@ -29,10 +34,10 @@ def create_app() -> FastAPI:
     """
     app = FastAPI(
         title="RecoverAI API",
-        version="0.4.0",
+        version="0.6.0",
         description=(
-            "Deterministic revenue-recovery system for Razorpay merchants. "
-            "Stage 4: merchant event ingestion and revenue-at-risk detection."
+            "AI-powered revenue-recovery system for merchants. "
+            "Stages 1–6: event ingestion, risk detection, LangGraph agent, dashboard."
         ),
         docs_url="/docs",
         redoc_url="/redoc",
@@ -41,11 +46,24 @@ def create_app() -> FastAPI:
     # ── Middleware ────────────────────────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173"],
+        allow_origins=[
+            "http://localhost:5173",   # Vite dev server
+            "http://127.0.0.1:5173",
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # ── Root redirect — visiting / in the browser goes to /docs ──────────────
+    @app.get("/", include_in_schema=False)
+    def root():
+        return RedirectResponse(url="/docs")
+
+    # ── Suppress favicon 404 in browser ──────────────────────────────────────
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon():
+        return Response(status_code=204)
 
     # ── Routers ───────────────────────────────────────────────────────────────
     app.include_router(health.router)

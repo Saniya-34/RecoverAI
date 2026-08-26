@@ -16,6 +16,7 @@ import {
   getRecoveryCase,
   getRecoveryAudit,
   runRecoveryAgent,
+  getCustomerHistory,
 } from './services/api.js';
 
 import SummaryCards from './components/SummaryCards.jsx';
@@ -46,6 +47,11 @@ export default function App() {
   const [caseDetail, setCaseDetail]         = useState(null);
   const [caseDetailLoading, setCaseDetailLoading] = useState(false);
   const [caseDetailError, setCaseDetailError]     = useState(null);
+
+  // ── Customer history ────────────────────────────────────────────────────────
+  const [customerHistory, setCustomerHistory]           = useState(null);
+  const [customerHistoryLoading, setCustomerHistoryLoading] = useState(false);
+  const [customerHistoryError, setCustomerHistoryError]     = useState(null);
 
   // ── Audit trail ─────────────────────────────────────────────────────────────
   const [audit, setAudit]             = useState(null);
@@ -107,6 +113,20 @@ export default function App() {
     }
   }, []);
 
+  // ── Load customer history ───────────────────────────────────────────────────
+  const loadCustomerHistory = useCallback(async (id) => {
+    setCustomerHistoryLoading(true);
+    setCustomerHistoryError(null);
+    setCustomerHistory(null);
+    try {
+      setCustomerHistory(await getCustomerHistory(id));
+    } catch (e) {
+      setCustomerHistoryError(e.message);
+    } finally {
+      setCustomerHistoryLoading(false);
+    }
+  }, []);
+
   // ── Load audit ───────────────────────────────────────────────────────────────
   const loadAudit = useCallback(async (id) => {
     setAuditLoading(true);
@@ -137,6 +157,7 @@ export default function App() {
     setSelectedId(id);
     loadCaseDetail(id);
     loadAudit(id);
+    loadCustomerHistory(id);
   };
 
   // ── Run agent ─────────────────────────────────────────────────────────────────
@@ -154,6 +175,7 @@ export default function App() {
         loadCases(statusFilter),
         loadCaseDetail(selectedId),
         loadAudit(selectedId),
+        loadCustomerHistory(selectedId),
       ]);
     } catch (e) {
       setAgentError(e.message);
@@ -242,6 +264,9 @@ export default function App() {
                 caseData={caseDetail}
                 loading={caseDetailLoading}
                 error={caseDetailError}
+                customerHistory={customerHistory}
+                historyLoading={customerHistoryLoading}
+                historyError={customerHistoryError}
               />
 
               <AgentPanel

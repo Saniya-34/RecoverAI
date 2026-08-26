@@ -81,6 +81,14 @@ export async function getRecoveryCase(caseId) {
   return apiFetch(`/api/recovery-cases/${caseId}`);
 }
 
+/**
+ * GET /api/recovery-cases/{case_id}/customer-history
+ * Returns aggregated customer history.
+ */
+export async function getCustomerHistory(caseId) {
+  return apiFetch(`/api/recovery-cases/${caseId}/customer-history`);
+}
+
 // ── Audit trail ───────────────────────────────────────────────────────────────
 
 /**

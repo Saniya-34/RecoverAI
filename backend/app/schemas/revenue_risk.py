@@ -70,3 +70,27 @@ class RecoveryCaseResponse(BaseModel):
 class RecoveryCaseListResponse(BaseModel):
     total: int
     cases: list[RecoveryCaseResponse]
+
+
+class CustomerPaymentAttempt(BaseModel):
+    id: int
+    amount: Decimal
+    currency: str
+    status: str
+    failure_reason: str | None
+    attempted_at: datetime | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CustomerHistoryResponse(BaseModel):
+    total_payment_attempts: int
+    successful_payments: int
+    failed_payments: int
+    success_rate: float
+    previous_recovery_attempts: int
+    payments: list[CustomerPaymentAttempt]
+
+    model_config = {"from_attributes": True}
+

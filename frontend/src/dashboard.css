@@ -243,6 +243,12 @@
 .chip-stop     { background: rgba(239,68,68,0.15);  color: #dc2626; }
 .chip-simulated{ background: rgba(168,85,247,0.15); color: #7e22ce; }
 
+.chip-success  { background: rgba(34,197,94,0.15);  color: #15803d; }
+.chip-failed   { background: rgba(239,68,68,0.15);  color: #dc2626; }
+.chip-pending  { background: rgba(234,179,8,0.15);  color: #a16207; }
+.chip-cancelled{ background: rgba(107,114,128,0.15);color: #374151; }
+
+
 /* ── Main panel ──────────────────────────────────────────────── */
 .main-panel {
   display: flex;

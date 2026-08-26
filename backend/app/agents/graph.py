@@ -79,6 +79,10 @@ def _audit(event_type: str, details: dict | None = None) -> dict:
 
 def make_load_case_node(db: Session):
     def load_case(state: AgentState) -> dict:
+        import os
+        import time
+        if not os.environ.get("PYTEST_CURRENT_TEST"):
+            time.sleep(0.3)
         tools = RecoveryTools(db)
         case_id = state["recovery_case_id"]
         audit_events = list(state.get("audit_events", []))
@@ -136,6 +140,10 @@ def make_investigate_node(db: Session):
     def investigate_case(state: AgentState) -> dict:
         if state.get("completed"):
             return {}
+        import os
+        import time
+        if not os.environ.get("PYTEST_CURRENT_TEST"):
+            time.sleep(0.5)
 
         tools = RecoveryTools(db)
         audit_events = list(state.get("audit_events", []))
@@ -242,6 +250,10 @@ def make_analyze_node(gemini_service: GeminiService | None = None):
     def analyze(state: AgentState) -> dict:
         if state.get("completed"):
             return {}
+        import os
+        import time
+        if not os.environ.get("PYTEST_CURRENT_TEST"):
+            time.sleep(1.0)
 
         audit_events = list(state.get("audit_events", []))
         errors = list(state.get("errors", []))
@@ -324,6 +336,10 @@ def make_policy_gate_node():
     def policy_gate(state: AgentState) -> dict:
         if state.get("completed"):
             return {}
+        import os
+        import time
+        if not os.environ.get("PYTEST_CURRENT_TEST"):
+            time.sleep(0.3)
 
         audit_events = list(state.get("audit_events", []))
 
@@ -367,6 +383,10 @@ def make_execute_action_node():
     def execute_action(state: AgentState) -> dict:
         if state.get("completed"):
             return {}
+        import os
+        import time
+        if not os.environ.get("PYTEST_CURRENT_TEST"):
+            time.sleep(0.6)
 
         audit_events = list(state.get("audit_events", []))
         errors = list(state.get("errors", []))

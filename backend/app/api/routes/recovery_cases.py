@@ -18,12 +18,15 @@ from sqlalchemy.orm import Session, selectinload
 
 from backend.app.database.dependencies import get_db
 from backend.app.models.recovery_case import CaseStatus, CaseType, RecoveryCase
+from backend.app.models.payment import Payment
+from backend.app.models.agent_action import AgentAction
 from backend.app.schemas.revenue_risk import (
     CustomerSummary,
     OrderSummary,
     PaymentSummary,
     RecoveryCaseListResponse,
     RecoveryCaseResponse,
+    CustomerHistoryResponse,
 )
 
 router = APIRouter(prefix="/api", tags=["recovery-cases"])
@@ -201,3 +204,60 @@ def list_recovery_cases(
         total=total,
         cases=[_to_response(c) for c in cases],
     )
+
+
+@router.get(
+    "/recovery-cases/{case_id}/customer-history",
+    response_model=CustomerHistoryResponse,
+    summary="Get customer payment and recovery history",
+    description="Returns aggregated metrics and list of previous payments for the customer associated with the recovery case.",
+)
+def get_customer_history(
+    case_id: int,
+    db: Session = Depends(get_db),
+) -> CustomerHistoryResponse:
+    # 1. Fetch recovery case to get customer_id
+    case = db.execute(
+        select(RecoveryCase).where(RecoveryCase.id == case_id)
+    ).scalars().first()
+
+    if not case:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"RecoveryCase {case_id} not found.",
+        )
+
+    customer_id = case.customer_id
+
+    # 2. Query all payments for this customer
+    payments = db.execute(
+        select(Payment)
+        .where(Payment.customer_id == customer_id)
+        .order_by(Payment.attempted_at.desc(), Payment.created_at.desc())
+    ).scalars().all()
+
+    # 3. Calculate metrics
+    total_attempts = len(payments)
+    successful = sum(1 for p in payments if p.status == "SUCCESS")
+    failed = sum(1 for p in payments if p.status == "FAILED")
+    success_rate = (successful / total_attempts) if total_attempts > 0 else 0.0
+
+    # 4. Count actual previous recovery attempts/actions (excluding this case)
+    previous_actions = db.execute(
+        select(func.count(AgentAction.id))
+        .join(RecoveryCase, AgentAction.recovery_case_id == RecoveryCase.id)
+        .where(
+            RecoveryCase.customer_id == customer_id,
+            RecoveryCase.id != case_id
+        )
+    ).scalar() or 0
+
+    return CustomerHistoryResponse(
+        total_payment_attempts=total_attempts,
+        successful_payments=successful,
+        failed_payments=failed,
+        success_rate=success_rate,
+        previous_recovery_attempts=previous_actions,
+        payments=payments,
+    )
+
