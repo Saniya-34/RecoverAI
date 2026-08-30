@@ -32,6 +32,12 @@ class Payment(Base):
         String(255), unique=True, nullable=True, index=True
     )
 
+    razorpay_payment_link_id: Mapped[str | None] = mapped_column(
+    String(255), unique=True, nullable=True, index=True
+   )
+
+
+
     # ------------------------------------------------------------------ #
     # Foreign keys                                                         #
     # ------------------------------------------------------------------ #

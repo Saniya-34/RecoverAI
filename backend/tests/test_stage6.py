@@ -94,13 +94,16 @@ class TestDashboardSummary:
         assert "recovered_revenue" in body
         assert "currency" in body
 
-    def test_summary_recovered_revenue_always_zero(self):
-        """Simulated actions must never report recovered revenue."""
+    def test_summary_recovered_revenue_matches_db(self):
+        """Recovered revenue must match the database recovered amount sum."""
+        from backend.app.models.recovery_case import RecoveryCase
+        from sqlalchemy import func, select
+        from backend.app.database import SessionLocal
+        with SessionLocal() as db:
+            expected = db.execute(select(func.coalesce(func.sum(RecoveryCase.recovered_amount), 0))).scalar() or 0
         r = client.get("/api/dashboard/summary")
         body = r.json()
-        assert float(body["recovered_revenue"]) == 0.0, (
-            "recovered_revenue must be 0 — simulated actions don't move real money"
-        )
+        assert float(body["recovered_revenue"]) == float(expected)
 
     def test_summary_currency_is_inr(self):
         r = client.get("/api/dashboard/summary")

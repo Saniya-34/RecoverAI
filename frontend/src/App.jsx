@@ -6,7 +6,7 @@
  * Simulated actions are clearly labelled — no real money is moved.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import './dashboard.css';
 
 import {
@@ -20,57 +20,48 @@ import {
 } from './services/api.js';
 
 import SummaryCards from './components/SummaryCards.jsx';
-import CaseList     from './components/CaseList.jsx';
-import CaseDetail   from './components/CaseDetail.jsx';
-import AgentPanel   from './components/AgentPanel.jsx';
-import AuditTrail   from './components/AuditTrail.jsx';
-
-// ──────────────────────────────────────────────────────────────────────────────
+import CaseList from './components/CaseList.jsx';
+import CaseDetail from './components/CaseDetail.jsx';
 
 export default function App() {
-  // ── Backend status ──────────────────────────────────────────────────────────
-  const [backendOnline, setBackendOnline] = useState(null); // null=checking
+  const [backendOnline, setBackendOnline] = useState(null);
 
-  // ── Dashboard summary ───────────────────────────────────────────────────────
-  const [summary, setSummary]           = useState(null);
+  const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState(null);
 
-  // ── Case list ───────────────────────────────────────────────────────────────
-  const [cases, setCases]               = useState([]);
+  const [cases, setCases] = useState([]);
   const [casesLoading, setCasesLoading] = useState(true);
-  const [casesError, setCasesError]     = useState(null);
+  const [casesError, setCasesError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
 
-  // ── Selected case ───────────────────────────────────────────────────────────
-  const [selectedId, setSelectedId]         = useState(null);
-  const [caseDetail, setCaseDetail]         = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [caseDetail, setCaseDetail] = useState(null);
   const [caseDetailLoading, setCaseDetailLoading] = useState(false);
-  const [caseDetailError, setCaseDetailError]     = useState(null);
+  const [caseDetailError, setCaseDetailError] = useState(null);
 
-  // ── Customer history ────────────────────────────────────────────────────────
-  const [customerHistory, setCustomerHistory]           = useState(null);
+  const [customerHistory, setCustomerHistory] = useState(null);
   const [customerHistoryLoading, setCustomerHistoryLoading] = useState(false);
-  const [customerHistoryError, setCustomerHistoryError]     = useState(null);
+  const [customerHistoryError, setCustomerHistoryError] = useState(null);
 
-  // ── Audit trail ─────────────────────────────────────────────────────────────
-  const [audit, setAudit]             = useState(null);
+  const [audit, setAudit] = useState(null);
   const [auditLoading, setAuditLoading] = useState(false);
-  const [auditError, setAuditError]   = useState(null);
+  const [auditError, setAuditError] = useState(null);
 
-  // ── Agent ───────────────────────────────────────────────────────────────────
   const [agentRunning, setAgentRunning] = useState(false);
-  const [agentResult, setAgentResult]   = useState(null);
-  const [agentError, setAgentError]     = useState(null);
+  const [agentResult, setAgentResult] = useState(null);
+  const [agentError, setAgentError] = useState(null);
 
-  // ── Health check ────────────────────────────────────────────────────────────
+  const [mobileShowDetail, setMobileShowDetail] = useState(false);
+  const detailPanelRef = useRef(null);
+
   useEffect(() => {
     getHealth()
       .then(() => setBackendOnline(true))
       .catch(() => setBackendOnline(false));
   }, []);
 
-  // ── Load summary ────────────────────────────────────────────────────────────
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
     setSummaryError(null);
@@ -83,12 +74,15 @@ export default function App() {
     }
   }, []);
 
-  // ── Load case list ───────────────────────────────────────────────────────────
-  const loadCases = useCallback(async (filter = '') => {
+  const loadCases = useCallback(async (status = '', type = '') => {
     setCasesLoading(true);
     setCasesError(null);
     try {
-      const data = await getRecoveryCases({ status: filter || undefined, limit: 100 });
+      const data = await getRecoveryCases({
+        status: status || undefined,
+        type: type || undefined,
+        limit: 100,
+      });
       setCases(data.cases ?? []);
     } catch (e) {
       setCasesError(e.message);
@@ -97,13 +91,10 @@ export default function App() {
     }
   }, []);
 
-  // ── Load case detail ─────────────────────────────────────────────────────────
   const loadCaseDetail = useCallback(async (id) => {
     setCaseDetailLoading(true);
     setCaseDetailError(null);
     setCaseDetail(null);
-    setAgentResult(null);
-    setAgentError(null);
     try {
       setCaseDetail(await getRecoveryCase(id));
     } catch (e) {
@@ -113,7 +104,6 @@ export default function App() {
     }
   }, []);
 
-  // ── Load customer history ───────────────────────────────────────────────────
   const loadCustomerHistory = useCallback(async (id) => {
     setCustomerHistoryLoading(true);
     setCustomerHistoryError(null);
@@ -127,7 +117,6 @@ export default function App() {
     }
   }, []);
 
-  // ── Load audit ───────────────────────────────────────────────────────────────
   const loadAudit = useCallback(async (id) => {
     setAuditLoading(true);
     setAuditError(null);
@@ -140,27 +129,41 @@ export default function App() {
     }
   }, []);
 
-  // ── Initial load ─────────────────────────────────────────────────────────────
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSummary();
-    loadCases(statusFilter);
+    loadCases(statusFilter, typeFilter);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Filter change ─────────────────────────────────────────────────────────────
   const handleFilterChange = (val) => {
     setStatusFilter(val);
-    loadCases(val);
+    loadCases(val, typeFilter);
   };
 
-  // ── Select case ───────────────────────────────────────────────────────────────
+  const handleTypeFilterChange = (val) => {
+    setTypeFilter(val);
+    loadCases(statusFilter, val);
+  };
+
   const handleSelectCase = (id) => {
     setSelectedId(id);
+    setCaseDetail(null);
+    setAgentResult(null);
+    setAgentError(null);
+    setAudit(null);
+    setCustomerHistory(null);
+    setMobileShowDetail(true);
     loadCaseDetail(id);
     loadAudit(id);
     loadCustomerHistory(id);
   };
 
-  // ── Run agent ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (detailPanelRef.current) {
+      detailPanelRef.current.scrollTop = 0;
+    }
+  }, [selectedId]);
+
   const handleRunAgent = async () => {
     if (!selectedId || agentRunning) return;
     setAgentRunning(true);
@@ -169,10 +172,9 @@ export default function App() {
     try {
       const result = await runRecoveryAgent(selectedId);
       setAgentResult(result);
-      // Refresh everything that changed
       await Promise.all([
         loadSummary(),
-        loadCases(statusFilter),
+        loadCases(statusFilter, typeFilter),
         loadCaseDetail(selectedId),
         loadAudit(selectedId),
         loadCustomerHistory(selectedId),
@@ -184,108 +186,98 @@ export default function App() {
     }
   };
 
-  // ────────────────────────────────────────────────────────────────────────────
   return (
     <div className="dashboard-layout">
-
-      {/* ── Header ── */}
       <header className="app-header">
         <div className="app-header-brand">
           <div className="app-header-logo">R</div>
           <div>
             <div className="app-header-title">RecoverAI</div>
             <div className="app-header-subtitle">
-              AI-powered revenue recovery for merchants
+              Recover failed payments and abandoned checkouts
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="header-status">
           {backendOnline === null && (
-            <span className="status-badge" style={{ background: 'var(--code-bg)' }}>
+            <span className="status-badge">
               <span className="status-dot" style={{ background: 'var(--text)' }} />
-              Checking…
+              Connecting…
             </span>
           )}
           {backendOnline === true && (
             <span className="status-badge online">
-              <span className="status-dot" /> Backend online
+              <span className="status-dot" /> Connected
             </span>
           )}
           {backendOnline === false && (
             <span className="status-badge offline">
-              <span className="status-dot" /> Backend unavailable
+              <span className="status-dot" /> Can&apos;t connect
             </span>
           )}
         </div>
       </header>
 
       {backendOnline === false && (
-        <div className="error-banner" style={{ margin: '12px 28px', fontSize: 14 }}>
-          ⚠ Backend unavailable. Start the FastAPI server on port 8000.
+        <div className="error-banner" style={{ margin: '8px 20px 0', flexShrink: 0 }}>
+          The recovery service is unavailable. Start the server on port 8000 and refresh.
         </div>
       )}
 
-      {/* ── Summary ── */}
       <SummaryCards
         summary={summary}
         loading={summaryLoading}
         error={summaryError}
       />
 
-      {/* ── Main content ── */}
       <div className="dashboard-main">
+        <div className={`list-pane${mobileShowDetail && selectedId ? ' hide-on-mobile' : ''}`}>
+          <CaseList
+            cases={cases}
+            loading={casesLoading}
+            error={casesError}
+            selectedId={selectedId}
+            onSelect={handleSelectCase}
+            statusFilter={statusFilter}
+            onStatusFilterChange={handleFilterChange}
+            typeFilter={typeFilter}
+            onTypeFilterChange={handleTypeFilterChange}
+          />
+        </div>
 
-        {/* ── Sidebar — case list ── */}
-        <CaseList
-          cases={cases}
-          loading={casesLoading}
-          error={casesError}
-          selectedId={selectedId}
-          onSelect={handleSelectCase}
-          statusFilter={statusFilter}
-          onStatusFilterChange={handleFilterChange}
-        />
-
-        {/* ── Main panel — case detail + agent ── */}
-        <div className="main-panel">
+        <div
+          className={`main-panel${selectedId && mobileShowDetail ? ' show-on-mobile' : ''}${!selectedId ? ' empty' : ''}`}
+          ref={detailPanelRef}
+        >
           {!selectedId ? (
             <div className="no-selection">
-              <div className="no-selection-icon">🔍</div>
-              <div className="no-selection-title">Select a recovery case</div>
+              <div className="no-selection-title">Select a customer</div>
               <div className="no-selection-desc">
-                Choose a case from the left panel to view its details,
-                run the AI recovery agent, and see the audit history.
+                Choose a case on the left to see why payment failed, the customer&apos;s
+                history, and what RecoverAI recommends next.
               </div>
             </div>
           ) : (
-            <>
-              <CaseDetail
-                caseData={caseDetail}
-                loading={caseDetailLoading}
-                error={caseDetailError}
-                customerHistory={customerHistory}
-                historyLoading={customerHistoryLoading}
-                historyError={customerHistoryError}
-              />
-
-              <AgentPanel
-                caseStatus={caseDetail?.status}
-                agentResult={agentResult}
-                running={agentRunning}
-                error={agentError}
-                onRun={handleRunAgent}
-              />
-
-              <AuditTrail
-                audit={audit}
-                loading={auditLoading}
-                error={auditError}
-              />
-            </>
+            <CaseDetail
+              caseData={caseDetail}
+              loading={caseDetailLoading}
+              error={caseDetailError}
+              customerHistory={customerHistory}
+              historyLoading={customerHistoryLoading}
+              historyError={customerHistoryError}
+              caseStatus={caseDetail?.status}
+              agentResult={agentResult}
+              agentRunning={agentRunning}
+              agentError={agentError}
+              onRunAgent={handleRunAgent}
+              audit={audit}
+              auditLoading={auditLoading}
+              auditError={auditError}
+              onBack={() => setMobileShowDetail(false)}
+            />
           )}
         </div>
-
       </div>
     </div>
   );

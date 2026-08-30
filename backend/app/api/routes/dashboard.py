@@ -1,12 +1,9 @@
 """
-backend/app/api/routes/dashboard.py
+backend/app/api/dashboard.py
 
 GET /api/dashboard/summary
 
 Returns aggregated merchant metrics for the dashboard summary cards.
-
-IMPORTANT: recovered_revenue is always ₹0 until real payment actions
-are implemented (Stage 7+). Simulated actions do not move money.
 """
 
 from decimal import Decimal
@@ -29,12 +26,10 @@ class DashboardSummary(BaseModel):
     in_progress_cases: int
     recovered_cases: int
     stopped_cases: int
-    # Always 0 until real payment execution is implemented
     recovered_revenue: Decimal
     currency: str = "INR"
     note: str = (
-        "recovered_revenue is ₹0 because recovery actions are currently simulated. "
-        "No real payments have been executed."
+        "recovered_revenue represents simulated recovered revenue from successful recovery cases."
     )
 
 
@@ -43,8 +38,7 @@ class DashboardSummary(BaseModel):
     response_model=DashboardSummary,
     summary="Get merchant dashboard summary",
     description=(
-        "Returns aggregated revenue-at-risk metrics for the dashboard. "
-        "recovered_revenue is always ₹0 in simulation mode."
+        "Returns aggregated revenue-at-risk metrics for the dashboard, including simulated recovered revenue."
     ),
 )
 def get_dashboard_summary(db: Session = Depends(get_db)) -> DashboardSummary:
@@ -84,6 +78,10 @@ def get_dashboard_summary(db: Session = Depends(get_db)) -> DashboardSummary:
         )
     ).scalar() or 0
 
+    recovered_revenue = db.execute(
+        select(func.coalesce(func.sum(RecoveryCase.recovered_amount), 0))
+    ).scalar() or 0
+
     return DashboardSummary(
         total_revenue_at_risk=Decimal(str(at_risk_row or 0)),
         total_cases=total_cases,
@@ -91,5 +89,5 @@ def get_dashboard_summary(db: Session = Depends(get_db)) -> DashboardSummary:
         in_progress_cases=in_progress,
         recovered_cases=recovered,
         stopped_cases=stopped,
-        recovered_revenue=Decimal("0.00"),
+        recovered_revenue=Decimal(str(recovered_revenue)),
     )

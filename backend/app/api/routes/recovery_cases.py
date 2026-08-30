@@ -61,6 +61,7 @@ def _to_response(case: RecoveryCase) -> RecoveryCaseResponse:
         case_type=case.case_type.value,
         status=case.status.value,
         risk_amount=case.risk_amount,
+        recovered_amount=case.recovered_amount,
         currency="INR",
         detected_at=case.detected_at,
         resolved_at=case.resolved_at,
@@ -173,6 +174,8 @@ def list_recovery_cases(
                     f"Valid values: {[s.value for s in CaseStatus]}"
                 ),
             )
+    else:
+        stmt = stmt.where(RecoveryCase.status.in_([CaseStatus.OPEN, CaseStatus.IN_PROGRESS]))
 
     if case_type:
         try:

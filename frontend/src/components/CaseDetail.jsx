@@ -1,8 +1,47 @@
 /**
- * CaseDetail — full case information panel with customer/order/payment context.
+ * CaseDetail — merchant-facing case workspace (right-hand panel).
  */
 
 import StatusBadge from './StatusBadge.jsx';
+import AgentPanel from './AgentPanel.jsx';
+import AuditTrail from './AuditTrail.jsx';
+import SimulatedBadge from './SimulatedBadge.jsx';
+
+const TYPE_LABELS = {
+  PAYMENT_FAILURE: 'Failed payment',
+  CHECKOUT_ABANDONMENT: 'Abandoned checkout',
+  SUBSCRIPTION_FAILURE: 'Failed subscription',
+  OTHER: 'Other',
+};
+
+function customerName(customer) {
+  if (!customer) return 'Unknown Customer';
+  return customer.name || customer.external_customer_id || 'Unknown Customer';
+}
+
+function fmtAmount(v) {
+  if (v == null) return '—';
+  return `₹${parseFloat(v).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function fmtPct(v) {
+  if (v == null) return '—';
+  return `${(parseFloat(v) * 100).toFixed(1)}%`;
+}
 
 function Field({ label, value, cls = '' }) {
   return (
@@ -13,41 +52,49 @@ function Field({ label, value, cls = '' }) {
   );
 }
 
-function fmtDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('en-IN', {
-    day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+function Section({ title, children, extra }) {
+  return (
+    <section className="detail-section">
+      <div className="detail-section-heading">
+        <h2 className="detail-section-title">{title}</h2>
+        {extra}
+      </div>
+      {children}
+    </section>
+  );
 }
 
-function fmtAmount(v, currency = 'INR') {
-  if (v == null) return '—';
-  return `₹${parseFloat(v).toLocaleString('en-IN', {
-    minimumFractionDigits: 2, maximumFractionDigits: 2,
-  })}`;
-}
-
-const TYPE_LABELS = {
-  PAYMENT_FAILURE:      'Payment Failure',
-  CHECKOUT_ABANDONMENT: 'Checkout Abandonment',
-  SUBSCRIPTION_FAILURE: 'Subscription Failure',
-  OTHER:                'Other',
-};
-
-export default function CaseDetail({ caseData, loading, error, customerHistory, historyLoading, historyError }) {
-  if (loading) {
+export default function CaseDetail({
+  caseData,
+  loading,
+  error,
+  customerHistory,
+  historyLoading,
+  historyError,
+  caseStatus,
+  agentResult,
+  agentRunning,
+  agentError,
+  onRunAgent,
+  audit,
+  auditLoading,
+  auditError,
+  onBack,
+}) {
+  if (loading && !caseData) {
     return (
       <div className="detail-section">
-        <div className="loading-row"><div className="spinner" /> Loading case…</div>
+        <div className="loading-row">
+          <div className="spinner" /> Loading case…
+        </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !caseData) {
     return (
       <div className="detail-section">
-        <div className="error-banner">Failed to load case: {error}</div>
+        <div className="error-banner">Could not load this case: {error}</div>
       </div>
     );
   }
@@ -55,173 +102,186 @@ export default function CaseDetail({ caseData, loading, error, customerHistory, 
   if (!caseData) return null;
 
   const { customer, order, payment } = caseData;
+  const recovered = parseFloat(caseData.recovered_amount) > 0;
+  const historyReady = Boolean(customerHistory) && !historyLoading;
 
   return (
     <>
-      {/* ── Risk Overview ── */}
-      <div className="detail-section">
-        <p className="detail-section-title">
-          Case #{caseData.id}
-          <StatusBadge value={caseData.status} />
-        </p>
-        <div className="detail-grid">
-          <div className="detail-field">
-            <span className="detail-label">Risk Amount</span>
-            <span className="detail-value amount">{fmtAmount(caseData.risk_amount)}</span>
-          </div>
-          <Field label="Case Type"   value={TYPE_LABELS[caseData.case_type] ?? caseData.case_type} />
-          <Field label="Detected At" value={fmtDate(caseData.detected_at)} />
-          <Field label="Resolved At" value={caseData.resolved_at ? fmtDate(caseData.resolved_at) : 'Not yet'} />
-        </div>
-
-        {caseData.explanation && (
-          <div style={{ marginTop: 14, padding: '10px 12px', background: 'var(--accent-bg)',
-            border: '1px solid var(--accent-border)', borderRadius: 8,
-            fontSize: 13, color: 'var(--text-h)', lineHeight: 1.5 }}>
-            {caseData.explanation}
-          </div>
+      <div className="detail-sticky-bar">
+        {onBack && (
+          <button type="button" className="btn-back" onClick={onBack}>
+            ← Cases
+          </button>
         )}
+        <div className="detail-sticky-identity">
+          <div className="detail-sticky-name">{customerName(customer)}</div>
+          <div className="detail-sticky-meta">
+            {customer?.email || 'No email on file'}
+          </div>
+        </div>
+        <StatusBadge value={caseData.status} />
       </div>
 
-      {/* ── Customer ── */}
-      {customer && (
-        <div className="detail-section">
-          <p className="detail-section-title">Customer</p>
-          <div className="detail-grid">
-            <Field label="Name"       value={customer.name} />
-            <Field label="Email"      value={customer.email} />
-            <Field label="Customer ID" value={customer.external_customer_id} cls="mono" />
-          </div>
+      {error && (
+        <div className="error-banner" style={{ margin: '12px 20px 0' }}>
+          Could not refresh this case: {error}
         </div>
       )}
 
-      {/* ── Order ── */}
-      {order && (
-        <div className="detail-section">
-          <p className="detail-section-title">Order</p>
-          <div className="detail-grid">
-            <Field label="Order ID"  value={order.external_order_id} cls="mono" />
-            <Field label="Amount"    value={fmtAmount(order.amount)} />
-            <div className="detail-field">
-              <span className="detail-label">Status</span>
-              <span className="detail-value"><StatusBadge value={order.status} /></span>
-            </div>
-            <Field label="Currency"  value={order.currency} />
-          </div>
+      <div className="highlight-strip">
+        <div className="highlight-item">
+          <span className="detail-label">At risk</span>
+          <span className="highlight-value accent">{fmtAmount(caseData.risk_amount)}</span>
         </div>
-      )}
-
-      {/* ── Payment ── */}
-      {payment && (
-        <div className="detail-section">
-          <p className="detail-section-title">Payment Attempt</p>
-          <div className="detail-grid">
-            <Field label="Payment ID"    value={payment.external_payment_id} cls="mono" />
-            <Field label="Amount"        value={fmtAmount(payment.amount)} />
-            <div className="detail-field">
-              <span className="detail-label">Status</span>
-              <span className="detail-value"><StatusBadge value={payment.status} /></span>
-            </div>
-            <Field label="Method"        value={payment.payment_method} />
-            <Field label="Failure Reason" value={payment.failure_reason} />
-          </div>
+        <div className="highlight-item">
+          <span className="detail-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            Recovered <SimulatedBadge />
+          </span>
+          <span className={`highlight-value ${recovered ? 'success' : ''}`}>
+            {fmtAmount(caseData.recovered_amount)}
+          </span>
         </div>
-      )}
+        <div className="highlight-item">
+          <span className="detail-label">Why it failed</span>
+          <span className="highlight-value wrap">
+            {payment?.failure_reason || 'No failure reason recorded'}
+          </span>
+        </div>
+        <div className="highlight-item">
+          <span className="detail-label">Payment success rate</span>
+          <span className="highlight-value">
+            {historyLoading ? '…' : historyReady ? fmtPct(customerHistory.success_rate) : '—'}
+          </span>
+        </div>
+        <div className="highlight-item">
+          <span className="detail-label">AI decision</span>
+          <span className="highlight-value">
+            {agentResult ? <StatusBadge value={agentResult.decision} /> : 'Not analyzed yet'}
+          </span>
+        </div>
+        <div className="highlight-item">
+          <span className="detail-label">Recommended action</span>
+          <span className="highlight-value">
+            {agentResult ? <StatusBadge value={agentResult.action} /> : '—'}
+          </span>
+        </div>
+      </div>
 
-      {/* ── Customer History ── */}
-      {(historyLoading || historyError || customerHistory) && (
-        <div className="detail-section">
-          <p className="detail-section-title">Customer History</p>
-          {historyLoading && (
-            <div className="loading-row">
-              <div className="spinner" /> Loading customer history…
-            </div>
-          )}
-          {historyError && (
-            <div className="error-banner">
-              Failed to load customer history: {historyError}
-            </div>
-          )}
-          {customerHistory && (
+      <Section title="Case overview" extra={<StatusBadge value={caseData.status} />}>
+        <div className="detail-grid">
+          <Field label="What happened" value={TYPE_LABELS[caseData.case_type] ?? caseData.case_type} />
+          <Field label="Found on" value={fmtDate(caseData.detected_at)} />
+          <Field
+            label="Closed on"
+            value={caseData.resolved_at ? fmtDate(caseData.resolved_at) : 'Still open'}
+          />
+        </div>
+        {caseData.explanation && (
+          <p className="case-explanation">{caseData.explanation}</p>
+        )}
+      </Section>
+
+      <Section title="Customer">
+        {customer ? (
+          <div className="detail-grid">
+            <Field label="Name" value={customer.name || '—'} />
+            <Field label="Email" value={customer.email || '—'} />
+          </div>
+        ) : (
+          <p className="muted-copy">No customer details on this case.</p>
+        )}
+      </Section>
+
+      <Section title="Order & payment">
+        <div className="detail-grid">
+          {order && (
             <>
-              <div className="detail-grid" style={{ marginBottom: 20 }}>
-                <div className="detail-field">
-                  <span className="detail-label">Total Payment Attempts</span>
-                  <span className="detail-value">{customerHistory.total_payment_attempts}</span>
-                </div>
-                <div className="detail-field">
-                  <span className="detail-label">Successful Payments</span>
-                  <span className="detail-value" style={{ color: '#16a34a', fontWeight: '600' }}>
-                    {customerHistory.successful_payments}
-                  </span>
-                </div>
-                <div className="detail-field">
-                  <span className="detail-label">Failed Payments</span>
-                  <span className="detail-value" style={{ color: '#dc2626', fontWeight: '600' }}>
-                    {customerHistory.failed_payments}
-                  </span>
-                </div>
-                <div className="detail-field">
-                  <span className="detail-label">Success Rate</span>
-                  <span className="detail-value">
-                    {(customerHistory.success_rate * 100).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="detail-field">
-                  <span className="detail-label">Previous Recovery Attempts</span>
-                  <span className="detail-value">{customerHistory.previous_recovery_attempts}</span>
-                </div>
-              </div>
-
-              <div className="payment-history-list" style={{ marginTop: 18 }}>
-                <span className="detail-label" style={{ display: 'block', marginBottom: 10 }}>
-                  Previous Payments
+              <Field label="Order amount" value={fmtAmount(order.amount)} />
+              <div className="detail-field">
+                <span className="detail-label">Order status</span>
+                <span className="detail-value">
+                  <StatusBadge value={order.status} />
                 </span>
-                {customerHistory.payments && customerHistory.payments.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {customerHistory.payments.map((p, idx) => (
-                      <div
-                        key={p.id || idx}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '10px 14px',
-                          background: 'var(--code-bg)',
-                          borderRadius: 8,
-                          fontSize: 13,
-                          border: '1px solid var(--border)',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                          <span style={{ fontWeight: 600, color: 'var(--text-h)' }}>
-                            {fmtAmount(p.amount, p.currency)}
-                          </span>
-                          <span style={{ fontSize: 11, color: 'var(--text)' }}>
-                            {p.attempted_at ? fmtDate(p.attempted_at) : fmtDate(p.created_at)}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          {p.failure_reason && (
-                            <span style={{ fontSize: 11, color: 'var(--text)', fontStyle: 'italic' }}>
-                              {p.failure_reason}
-                            </span>
-                          )}
-                          <StatusBadge value={p.status} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 12, color: 'var(--text)', fontStyle: 'italic', padding: '10px 0' }}>
-                    No previous payments found for this customer.
-                  </div>
-                )}
               </div>
             </>
           )}
+          {payment ? (
+            <>
+              <Field label="Payment amount" value={fmtAmount(payment.amount)} />
+              <div className="detail-field">
+                <span className="detail-label">Payment status</span>
+                <span className="detail-value">
+                  <StatusBadge value={payment.status} />
+                </span>
+              </div>
+              <Field label="Payment method" value={payment.payment_method || '—'} />
+              <Field
+                label="Failure reason"
+                value={payment.failure_reason || 'Not recorded'}
+              />
+            </>
+          ) : (
+            <p className="muted-copy">No payment attempt is attached to this case.</p>
+          )}
         </div>
-      )}
+      </Section>
+
+      <Section title="Customer payment history">
+        {historyLoading && (
+          <div className="loading-row">
+            <div className="spinner" /> Loading payment history…
+          </div>
+        )}
+        {historyError && (
+          <div className="error-banner">Could not load payment history: {historyError}</div>
+        )}
+        {customerHistory && !historyLoading && (
+          <>
+            <div className="detail-grid" style={{ marginBottom: 16 }}>
+              <Field label="Attempts" value={customerHistory.total_payment_attempts} />
+              <Field label="Succeeded" value={customerHistory.successful_payments} />
+              <Field label="Failed" value={customerHistory.failed_payments} />
+              <Field label="Success rate" value={fmtPct(customerHistory.success_rate)} />
+              <Field
+                label="Past recovery tries"
+                value={customerHistory.previous_recovery_attempts}
+              />
+            </div>
+            {customerHistory.payments?.length > 0 ? (
+              <div className="payment-history-list">
+                {customerHistory.payments.map((p, idx) => (
+                  <div key={p.id || idx} className="payment-history-row">
+                    <div>
+                      <div className="payment-history-amount">{fmtAmount(p.amount)}</div>
+                      <div className="payment-history-date">
+                        {fmtDate(p.attempted_at || p.created_at)}
+                      </div>
+                    </div>
+                    <div className="payment-history-right">
+                      {p.failure_reason && (
+                        <span className="payment-history-reason">{p.failure_reason}</span>
+                      )}
+                      <StatusBadge value={p.status} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted-copy">No previous payments for this customer.</p>
+            )}
+          </>
+        )}
+      </Section>
+
+      <AgentPanel
+        caseStatus={caseStatus ?? caseData.status}
+        agentResult={agentResult}
+        running={agentRunning}
+        error={agentError}
+        onRun={onRunAgent}
+      />
+
+      <AuditTrail audit={audit} loading={auditLoading} error={auditError} />
     </>
   );
 }

@@ -68,6 +68,48 @@ class RecoveryAgent:
             )
 
         if case.status not in ELIGIBLE_STATUSES:
+            if case.status in (CaseStatus.RECOVERED, CaseStatus.NOT_RECOVERED, CaseStatus.STOPPED):
+                from backend.app.models.agent_action import AgentAction
+                from sqlalchemy import select
+                latest_action = db.execute(
+                    select(AgentAction)
+                    .where(AgentAction.recovery_case_id == case_id)
+                    .order_by(AgentAction.created_at.desc())
+                ).scalars().first()
+
+                decision_name = "RECOVER" if case.status == CaseStatus.RECOVERED else "STOP"
+                action_name = latest_action.action_type.value if latest_action else ("RETRY_PAYMENT" if case.status == CaseStatus.RECOVERED else "STOP")
+                action_result_dict = latest_action.result if latest_action else {
+                    "success": (case.status == CaseStatus.RECOVERED),
+                    "action": action_name,
+                    "simulated": True,
+                    "message": f"Case has terminal status {case.status.value}.",
+                    "payment_outcome": "SUCCESS" if case.status == CaseStatus.RECOVERED else "FAILURE",
+                }
+
+                response = AgentRunResponse(
+                    case_id=case_id,
+                    decision=decision_name,
+                    action=action_name,
+                    risk_amount=case.risk_amount,
+                    recovered_amount=case.recovered_amount,
+                    currency="INR",
+                    confidence=1.0,
+                    reason=f"Case already resolved with status: {case.status.value}.",
+                    evidence=[f"Case status is {case.status.value} in database."],
+                    action_result=ActionResult(
+                        success=action_result_dict.get("success", False),
+                        action=action_result_dict.get("action", action_name),
+                        simulated=action_result_dict.get("simulated", True),
+                        message=action_result_dict.get("message", f"Case has status {case.status.value}."),
+                        payment_outcome=action_result_dict.get("payment_outcome", ("SUCCESS" if case.status == CaseStatus.RECOVERED else "FAILURE")),
+                    ),
+                    policy_override=False,
+                    agent_action_id=latest_action.id if latest_action else None,
+                    completed_at=case.resolved_at or case.updated_at,
+                )
+                return AgentRunResult(success=True, response=response)
+
             return AgentRunResult(
                 success=False,
                 response=None,
@@ -95,6 +137,7 @@ class RecoveryAgent:
                 config={"recursion_limit": 10},
             )
             db.commit()
+            db.refresh(case)
             logger.info("RecoveryAgent: workflow complete for case %d", case_id)
 
         except Exception as exc:
@@ -118,6 +161,7 @@ class RecoveryAgent:
             decision=final_state.get("final_decision", "STOP"),
             action=final_state.get("final_action", "STOP"),
             risk_amount=Decimal(final_state.get("risk_amount", "0")),
+            recovered_amount=case.recovered_amount,
             currency=final_state.get("currency", "INR"),
             confidence=final_state.get("confidence", 0.0),
             reason=final_state.get("decision_reason") or final_state.get("policy_reason", ""),
@@ -127,6 +171,7 @@ class RecoveryAgent:
                 action=action_result_dict.get("action", "STOP"),
                 simulated=action_result_dict.get("simulated", True),
                 message=action_result_dict.get("message"),
+                payment_outcome=action_result_dict.get("payment_outcome", "WAIT"),
             ),
             policy_override=final_state.get("policy_overridden", False),
             agent_action_id=final_state.get("agent_action_id"),

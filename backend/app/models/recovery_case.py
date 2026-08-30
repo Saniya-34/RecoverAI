@@ -88,6 +88,10 @@ class RecoveryCase(Base):
     risk_amount: Mapped[Decimal] = mapped_column(
         Numeric(precision=12, scale=2), nullable=False
     )
+    recovered_amount: Mapped[Decimal] = mapped_column(
+        Numeric(precision=12, scale=2), nullable=False, default=Decimal("0.00")
+    )
+
 
     # ------------------------------------------------------------------ #
     # Lifecycle status                                                     #

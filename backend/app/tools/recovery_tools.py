@@ -44,6 +44,7 @@ class CaseContext:
     case_type: str
     status: str
     risk_amount: Decimal
+    recovered_amount: Decimal
     currency: str
     customer_id: int
     order_id: int
@@ -155,6 +156,7 @@ class RecoveryTools:
             case_type=case.case_type.value,
             status=case.status.value,
             risk_amount=case.risk_amount,
+            recovered_amount=case.recovered_amount,
             currency="INR",
             customer_id=case.customer_id,
             order_id=case.order_id,

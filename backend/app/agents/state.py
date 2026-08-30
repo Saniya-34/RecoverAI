@@ -34,6 +34,7 @@ class AgentState(TypedDict, total=False):
     case_type: str                  # PAYMENT_FAILURE | CHECKOUT_ABANDONMENT | …
     case_status: str                # OPEN | IN_PROGRESS | …
     risk_amount: str                # Decimal as string — JSON-safe
+    recovered_amount: str           # Decimal as string — JSON-safe
     currency: str
     customer_id: int
     order_id: int

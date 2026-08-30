@@ -1,17 +1,27 @@
 /**
- * AgentPanel — Run Recovery Agent button + result display.
- *
- * IMPORTANT: clearly shows SIMULATED on every result.
- * Never implies real money was moved.
+ * AgentPanel — AI decision + recovery action.
+ * Simulated actions are clearly labelled — no real money is moved.
  */
 
 import StatusBadge from './StatusBadge.jsx';
+import SimulatedBadge from './SimulatedBadge.jsx';
+
+function fmtAmount(v) {
+  if (v == null) return '—';
+  return `₹${parseFloat(v).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
 
 function fmtDate(iso) {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('en-IN', {
-    day: 'numeric', month: 'short',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
@@ -39,78 +49,54 @@ export default function AgentPanel({
 
   return (
     <>
-      {/* ── Run button ── */}
-      <div className="agent-section">
-        {running ? (
+      <section className="detail-section">
+        <div className="detail-section-heading">
+          <h2 className="detail-section-title">AI recovery decision</h2>
+        </div>
+
+        {!r && !running && (
+          <p className="muted-copy">
+            This case has not been analyzed yet. Start recovery to get a
+            recommendation.
+          </p>
+        )}
+
+        {running && (
           <div className="agent-running-label">
             <div className="spinner" />
-            Analyzing recovery opportunity…
-          </div>
-        ) : (
-          <button
-            className="btn-run-agent"
-            onClick={onRun}
-            disabled={!isEligible || running}
-            title={!isEligible ? `Case is ${caseStatus} — not eligible for agent run` : ''}
-          >
-            ▶ Run Recovery Agent
-          </button>
-        )}
-
-        {!isEligible && !running && (
-          <span className="agent-hint">
-            Only OPEN or IN_PROGRESS cases can be processed.
-          </span>
-        )}
-
-        {error && (
-          <div className="error-banner" style={{ margin: 0 }}>
-            Recovery agent failed: {error}
+            Reviewing this customer and recommending a next step…
           </div>
         )}
-      </div>
 
-      {/* ── Result card ── */}
-      {r && (
-        <div className="agent-result-section">
-          <p className="detail-section-title">Agent Result</p>
+        {r && (
           <div className="agent-result-card">
-
-            {/* Decision + Action */}
             <div className="agent-result-header">
-              <span className="agent-result-title">Decision</span>
-              <StatusBadge value={r.decision} />
-              <span className="agent-result-title" style={{ marginLeft: 12 }}>Action</span>
-              <StatusBadge value={r.action} />
+              <div className="agent-result-pair">
+                <span className="detail-label">Decision</span>
+                <StatusBadge value={r.decision} />
+              </div>
+              <div className="agent-result-pair">
+                <span className="detail-label">Recommended action</span>
+                <StatusBadge value={r.action} />
+              </div>
               {r.policy_override && (
-                <span className="chip chip-stop" style={{ marginLeft: 8 }}>
-                  Policy Override
-                </span>
+                <span className="chip chip-stop">Safety rule applied</span>
               )}
             </div>
 
-            {/* Confidence */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 12, color: 'var(--text)' }}>Confidence</span>
+            <div className="confidence-row">
+              <span className="detail-label">How sure the AI is</span>
               <ConfidenceBar value={r.confidence} />
             </div>
 
-            {/* Reason */}
             <div>
-              <div style={{ fontSize: 11, color: 'var(--text)', fontWeight: 600,
-                textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>
-                Reason
-              </div>
+              <div className="detail-label" style={{ marginBottom: 4 }}>Why</div>
               <div className="agent-reason">{r.reason}</div>
             </div>
 
-            {/* Evidence */}
             {r.evidence && r.evidence.length > 0 && (
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text)', fontWeight: 600,
-                  textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>
-                  Evidence
-                </div>
+              <details className="tech-details">
+                <summary>Facts used for this decision</summary>
                 <div className="evidence-list">
                   {r.evidence.map((e, i) => (
                     <div key={i} className="evidence-item">
@@ -119,54 +105,97 @@ export default function AgentPanel({
                     </div>
                   ))}
                 </div>
-              </div>
+              </details>
             )}
-
-            {/* Simulated action result */}
-            {r.action_result && (
-              <div>
-                <div className="simulated-notice">
-                  ⚠ SIMULATED ACTION — No real payments were made. No money moved.
-                </div>
-                <div className="action-result-row" style={{ marginTop: 10 }}>
-                  <span style={{ fontSize: 12, color: 'var(--text)' }}>Action Status:</span>
-                  <span className="chip chip-simulated">SIMULATED</span>
-                  <span style={{ fontSize: 12, color: 'var(--text)' }}>
-                    {r.action_result.success ? '✓ Success (simulated)' : '✗ Failed'}
-                  </span>
-                </div>
-                {r.action_result.message && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text)',
-                    fontStyle: 'italic', lineHeight: 1.5 }}>
-                    {r.action_result.message}
-                  </div>
-                )}
-                <div className="action-result-row" style={{ marginTop: 8 }}>
-                  <span style={{ fontSize: 12, color: 'var(--text)' }}>Money Recovered:</span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-h)' }}>₹0</span>
-                  <span style={{ fontSize: 11, color: 'var(--text)' }}>
-                    (simulation — not real)
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Completed at */}
-            {r.completed_at && (
-              <div style={{ fontSize: 11, color: 'var(--text)', borderTop: '1px solid var(--border)',
-                paddingTop: 10, marginTop: 2 }}>
-                Completed at {fmtDate(r.completed_at)}
-                {r.agent_action_id && (
-                  <span style={{ marginLeft: 12 }}>
-                    Agent Action #{r.agent_action_id}
-                  </span>
-                )}
-              </div>
-            )}
-
           </div>
+        )}
+      </section>
+
+      <section className="detail-section agent-section">
+        <div className="detail-section-heading">
+          <h2 className="detail-section-title">Recovery action</h2>
         </div>
-      )}
+
+        <div className="agent-actions">
+          {running ? (
+            <div className="agent-running-label">
+              <div className="spinner" />
+              Working…
+            </div>
+          ) : (
+            <button
+              className="btn-run-agent"
+              onClick={onRun}
+              disabled={!isEligible || running}
+              title={!isEligible ? `This case is ${caseStatus} and cannot be processed again` : ''}
+            >
+              Start recovery
+            </button>
+          )}
+          <span className="agent-hint">
+            Demo only — no real payments or charges.
+          </span>
+        </div>
+
+        {!isEligible && !running && (
+          <p className="agent-hint" style={{ marginTop: 8 }}>
+            Only open or in-progress cases can be recovered.
+          </p>
+        )}
+
+        {error && (
+          <div className="error-banner" style={{ margin: '12px 0 0' }}>
+            Recovery could not be started: {error}
+          </div>
+        )}
+
+        {r?.action_result && (
+          <div className="action-outcome">
+            <div className="simulated-notice">
+              Demo action — no real payments were made.
+            </div>
+            <div className="detail-grid" style={{ marginTop: 12 }}>
+              <div className="detail-field">
+                <span className="detail-label">Case status</span>
+                <span className="detail-value" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <StatusBadge value={caseStatus} />
+                  <SimulatedBadge />
+                </span>
+              </div>
+              <div className="detail-field">
+                <span className="detail-label">Result</span>
+                <span
+                  className="detail-value"
+                  style={{
+                    fontWeight: 600,
+                    color: r.action_result.success ? '#4ade80' : '#f87171',
+                  }}
+                >
+                  {r.action_result.success ? 'Succeeded' : 'Did not succeed'}
+                </span>
+              </div>
+              <div className="detail-field">
+                <span className="detail-label">Payment outcome</span>
+                <span className="detail-value">
+                  <StatusBadge value={r.action_result.payment_outcome} />
+                </span>
+              </div>
+              <div className="detail-field">
+                <span className="detail-label">Amount recovered (demo)</span>
+                <span className="detail-value amount">{fmtAmount(r.recovered_amount)}</span>
+              </div>
+            </div>
+            {r.action_result.message && (
+              <p className="action-message">{r.action_result.message}</p>
+            )}
+            {r.completed_at && (
+              <p className="muted-copy" style={{ marginTop: 10 }}>
+                Finished {fmtDate(r.completed_at)}
+              </p>
+            )}
+          </div>
+        )}
+      </section>
     </>
   );
 }

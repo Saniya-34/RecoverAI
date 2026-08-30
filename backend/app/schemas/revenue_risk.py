@@ -55,6 +55,7 @@ class RecoveryCaseResponse(BaseModel):
     case_type: str
     status: str
     risk_amount: Decimal
+    recovered_amount: Decimal = Decimal("0.00")
     currency: str = "INR"
     detected_at: datetime
     resolved_at: datetime | None

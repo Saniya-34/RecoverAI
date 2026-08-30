@@ -102,6 +102,7 @@ class ActionResult(BaseModel):
     action: str
     simulated: bool = True
     message: str | None = None
+    payment_outcome: str = "WAIT"
 
 
 class AgentRunResponse(BaseModel):
@@ -116,6 +117,7 @@ class AgentRunResponse(BaseModel):
     decision: str
     action: str
     risk_amount: Decimal
+    recovered_amount: Decimal = Decimal("0.00")
     currency: str = "INR"
     confidence: float
     reason: str
