@@ -42,6 +42,9 @@ from backend.app.models.agent_action import (  # noqa: F401
 # 6. Depends on RecoveryCase + AgentAction
 from backend.app.models.audit_log import AuditLog  # noqa: F401
 
+# 7. Razorpay webhook events
+from backend.app.models.razorpay_webhook_event import RazorpayWebhookEvent  # noqa: F401
+
 __all__ = [
     # ORM models
     "Customer",
@@ -51,6 +54,7 @@ __all__ = [
     "RecoveryCase",
     "AgentAction",
     "AuditLog",
+    "RazorpayWebhookEvent",
     # Enums
     "CheckoutEventType",
     "CaseType",

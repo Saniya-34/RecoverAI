@@ -176,9 +176,11 @@ export default function CaseDetail({
             value={caseData.resolved_at ? fmtDate(caseData.resolved_at) : 'Still open'}
           />
         </div>
-        {caseData.explanation && (
-          <p className="case-explanation">{caseData.explanation}</p>
-        )}
+        <p className="case-explanation">
+          {caseData.status === 'RECOVERED'
+            ? 'Payment successfully recovered. Case has been recovered.'
+            : caseData.explanation}
+        </p>
       </Section>
 
       <Section title="Customer">

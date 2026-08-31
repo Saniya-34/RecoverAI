@@ -214,13 +214,13 @@ class RazorpayService:
             # Razorpay's Python SDK expects the webhook body as a string.
             raw_body = payload.decode("utf-8")
 
-            result = self.client.utility.verify_webhook_signature(
+            self.client.utility.verify_webhook_signature(
                 raw_body,
                 signature,
                 webhook_secret,
             )
 
-            return bool(result)
+            return True
 
         except Exception as exc:
             logger.warning(

@@ -22,7 +22,7 @@ from fastapi.responses import RedirectResponse, Response
 # Alembic can introspect the schema without extra configuration.
 from . import models as _models  # noqa: F401
 
-from .api.routes import agent, audit, dashboard, events, health, recovery_cases
+from .api.routes import agent, audit, dashboard, events, health, recovery_cases, razorpay_webhook
 
 
 def create_app() -> FastAPI:
@@ -72,6 +72,7 @@ def create_app() -> FastAPI:
     app.include_router(recovery_cases.router)
     app.include_router(audit.router)
     app.include_router(agent.router)
+    app.include_router(razorpay_webhook.router)
 
     return app
 
