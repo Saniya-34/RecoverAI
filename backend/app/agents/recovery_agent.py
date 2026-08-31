@@ -45,12 +45,17 @@ class RecoveryAgent:
         agent = RecoveryAgent(gemini_service=mock_service)
     """
 
-    def __init__(self, gemini_service: GeminiService | None = None) -> None:
+    def __init__(
+        self,
+        gemini_service: GeminiService | None = None,
+        executor=None,
+    ) -> None:
         """
         gemini_service : Injectable mock for testing.
                          If None, the graph creates a real GeminiService.
         """
         self._gemini_service = gemini_service
+        self._executor = executor
 
     def run(self, case_id: int, db: Session) -> AgentRunResult:
         """
@@ -126,7 +131,11 @@ class RecoveryAgent:
         )
 
         try:
-            graph = build_recovery_graph(db, gemini_service=self._gemini_service)
+            graph = build_recovery_graph(
+                db,
+                gemini_service=self._gemini_service,
+                executor=self._executor,
+            )   
             final_state = graph.invoke(
                 {
                     "recovery_case_id": case_id,

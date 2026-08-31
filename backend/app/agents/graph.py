@@ -725,7 +725,7 @@ def make_policy_gate_node():
 # Node 5: execute_action
 # ──────────────────────────────────────────────────────────────────────────────
 
-def make_execute_action_node():
+def make_execute_action_node(executor_override=None):
 
     def execute_action(state: AgentState) -> dict:
 
@@ -775,11 +775,11 @@ def make_execute_action_node():
             # Otherwise:
             #     SimulatedActionExecutor
 
-            exec_result = (
-               executor.execute(
-                    action,
-                    context,
-                )
+            action_executor = executor_override or executor
+
+            exec_result = action_executor.execute(
+                action,
+                context,
             )
 
             is_simulated = getattr(
@@ -1528,6 +1528,7 @@ def route_after_policy(state: AgentState) -> str:
 def build_recovery_graph(
     db: Session,
     gemini_service: GeminiService | None = None,
+    executor=None,
 ) -> Any:
     """
     Build and compile the LangGraph recovery workflow.
@@ -1573,7 +1574,7 @@ def build_recovery_graph(
 
     graph.add_node(
         "execute_action",
-        make_execute_action_node(),
+        make_execute_action_node(executor),
     )
 
     graph.add_node(
