@@ -753,18 +753,18 @@ class SyntheticDataGenerator:
         #
         # The counts are intentionally kept small so the dashboard is easy
         # to inspect while still covering the important recovery scenarios.
-        self._build_s01_loyal_one_off_failure(n=7)   # strong payment history
-        self._build_s02_new_customer_single_failure(n=4)
-        self._build_s03_repeated_failures(n=3)
-        self._build_s04_clean_abandonment(n=3)
-        self._build_s05_fail_then_abandon(n=3)
-        self._build_s06_high_value_failure(n=3)
-        self._build_s07_subscription_failure(n=2)
-        self._build_s08_already_recovered(n=2)
-        self._build_s09_cancelled_order(n=2)
-        self._build_s10_stale_abandonment(n=2)
-        self._build_s11_mixed_history(n=2)
-        self._build_s12_purely_successful(n=2)
+        self._build_s01_loyal_one_off_failure(n=30)
+        self._build_s02_new_customer_single_failure(n=8)
+        self._build_s03_repeated_failures(n=6)
+        self._build_s04_clean_abandonment(n=10)
+        self._build_s05_fail_then_abandon(n=10)
+        self._build_s06_high_value_failure(n=5)
+        self._build_s07_subscription_failure(n=7)
+        self._build_s08_already_recovered(n=5)
+        self._build_s09_cancelled_order(n=4)
+        self._build_s10_stale_abandonment(n=4)
+        self._build_s11_mixed_history(n=4)
+        self._build_s12_purely_successful(n=4)
 
         # Three dedicated open cases for manually testing the recovery agent.
         self._build_test_cases()
