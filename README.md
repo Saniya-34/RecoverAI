@@ -777,41 +777,6 @@ VITE_API_BASE_URL=http://localhost:8000
 
 ---
 
-## Environment Variables
-
-Create `backend/.env` with the following variables. Never commit this file.
-
-```env
-# ── Database ─────────────────────────────────────────────────────────────
-DATABASE_URL=postgresql+psycopg://recoverai_user:recoverai_password@localhost:5432/recoverai
-
-# ── Google Gemini ─────────────────────────────────────────────────────────
-GEMINI_API_KEY=<your_gemini_api_key>
-AGENT_MODEL=gemini-3.5-flash-lite   # or gemini-1.5-flash etc.
-
-# ── Razorpay ─────────────────────────────────────────────────────────────
-USE_RAZORPAY_TEST_MODE=true
-RAZORPAY_KEY_ID=<your_test_key_id>
-RAZORPAY_KEY_SECRET=<your_test_key_secret>
-RAZORPAY_WEBHOOK_SECRET=<your_webhook_secret>
-
-# ── Recovery Policy ───────────────────────────────────────────────────────
-MAX_RECOVERY_ATTEMPTS=2
-```
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `GEMINI_API_KEY` | Yes | Google Gemini API key |
-| `AGENT_MODEL` | No | Gemini model name (default: `gemini-3.5-flash-lite`) |
-| `USE_RAZORPAY_TEST_MODE` | No | Enable Razorpay Test Mode executor (default: `false`) |
-| `RAZORPAY_KEY_ID` | If Razorpay enabled | Test Mode API Key ID |
-| `RAZORPAY_KEY_SECRET` | If Razorpay enabled | Test Mode API Key Secret |
-| `RAZORPAY_WEBHOOK_SECRET` | If Razorpay enabled | Webhook HMAC secret |
-| `MAX_RECOVERY_ATTEMPTS` | No | Maximum agent runs per case (default: `2`) |
-
----
-
 ## Running the Application
 
 ### Start the Backend
