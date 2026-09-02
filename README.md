@@ -1002,17 +1002,6 @@ RecoverAI/
 
 ---
 
-## Current Limitations
-
-- **Razorpay Test Mode** — All Razorpay payment links are created in Test Mode. No real customer charges occur. Webhooks are simulated through Razorpay's Test Mode dashboard.
-- **No real notifications** — Customer notification is simulated: a `PAYMENT_LINK_SENT` audit entry is recorded with the customer's email/contact, but no actual email, SMS, or WhatsApp message is sent.
-- **Local webhook via zrok** — Razorpay webhook delivery requires a public HTTPS URL. This is provided by a zrok tunnel, which must be running during development. The tunnel URL changes on each restart unless a reserved share is configured.
-- **No authentication** — RecoverAI does not implement user login, sessions, or access control. This is by design for the current scope.
-- **Gemini API required for AI features** — Without a valid `GEMINI_API_KEY`, the agent defaults to WAIT for all cases.
-- **Simulated mode default** — `USE_RAZORPAY_TEST_MODE` defaults to `false`, meaning all actions are simulated locally unless explicitly enabled.
-
----
-
 ## Future Enhancements
 
 The following capabilities are not currently implemented and are candidates for future development:
