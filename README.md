@@ -1017,8 +1017,8 @@ RecoverAI/
 
 The following capabilities are not currently implemented and are candidates for future development:
 
-- **Real customer notifications** — Integrate an email provider (SendGrid, AWS SES) and SMS gateway (Twilio) to deliver payment links via real channels
-- **Authentication and authorisation** — Add merchant login, API key authentication, and role-based access control
+- **Real customer notifications** — Integrate an email provider (SendGrid, AWS SES) and SMS gateway to deliver payment links via real channels
+- **Authentication and authorisation** — Add merchant login, API key authentication
 - **Production payment infrastructure** — Move from Test Mode to Razorpay Live Mode for real payment processing
 - **Scheduled recovery** — Background job scheduler (Celery, APScheduler) to run the agent automatically at configurable intervals after case detection
 - **Multi-channel notifications** — WhatsApp Business API, push notifications, in-app messaging
@@ -1028,21 +1028,6 @@ The following capabilities are not currently implemented and are candidates for 
 - **Cloud deployment** — Containerised deployment on AWS/GCP/Azure with managed PostgreSQL and production-grade secrets management
 - **Webhook reliability** — Retry queues, dead-letter handling, and webhook replay for missed events
 - **Subscription recovery** — Dedicated flow for recurring billing failures with smarter retry scheduling
-
----
-
-## Screenshots
-
-> The following screenshots can be added to the `docs/` folder and linked here.
-
-| View | Placeholder |
-|------|-------------|
-| Main dashboard | `docs/architecture/dashboard.png` |
-| Customer list with filters | `docs/architecture/customer-list.png` |
-| AI recommendation panel | `docs/architecture/ai-recommendation.png` |
-| Payment link + notification banner | `docs/architecture/payment-link.png` |
-| Audit timeline (expanded) | `docs/architecture/audit-timeline.png` |
-| Toast notification | `docs/architecture/toast.png` |
 
 ---
 
