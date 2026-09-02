@@ -578,8 +578,6 @@ localhost:8000/api/webhooks/razorpay
 - **Key safety in logs** — `GeminiService` logs only the first 4 characters of the API key as a visibility marker. Full keys are never logged or returned in API responses.
 - **CORS** — The FastAPI CORS middleware allows only `http://localhost:5173` and `http://127.0.0.1:5173` (Vite dev server) for cross-origin requests.
 
-> **Note:** RecoverAI does not implement authentication or login/logout. It is designed as a merchant-facing operations tool where access control is handled at the infrastructure layer.
-
 ---
 
 ## Synthetic Data
