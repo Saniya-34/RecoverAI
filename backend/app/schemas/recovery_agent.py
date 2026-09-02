@@ -103,6 +103,7 @@ class ActionResult(BaseModel):
     simulated: bool = True
     message: str | None = None
     payment_outcome: str = "WAIT"
+    notification: dict | None = None  # simulated notification details
 
 
 class AgentRunResponse(BaseModel):

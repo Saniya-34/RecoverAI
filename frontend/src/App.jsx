@@ -14,6 +14,7 @@ import {
 import SummaryCards from './components/SummaryCards.jsx';
 import CaseList     from './components/CaseList.jsx';
 import CaseDetail   from './components/CaseDetail.jsx';
+import Toast        from './components/Toast.jsx';
 
 /* 4-pointed star logo matching reference image */
 function StarLogo() {
@@ -64,6 +65,7 @@ export default function App() {
   const [agentRunning, setAgentRunning]           = useState(false);
   const [agentResult, setAgentResult]             = useState(null);
   const [agentError, setAgentError]               = useState(null);
+  const [toast, setToast]                         = useState(null);
   const detailRef = useRef(null);
 
   useEffect(() => {
@@ -133,6 +135,14 @@ export default function App() {
     try {
       const result = await runRecoveryAgent(selectedId);
       setAgentResult(result);
+      // Show toast when a payment link action succeeded (simulated or real)
+      const ar = result?.action_result;
+      if (
+        ar?.success &&
+        (ar?.action === 'SEND_PAYMENT_LINK' || ar?.action === 'RETRY_PAYMENT' || ar?.notification)
+      ) {
+        setToast(true);
+      }
       await Promise.all([
         loadSummary(), loadCases(statusFilter, typeFilter),
         loadCaseDetail(selectedId), loadAudit(selectedId), loadCustomerHistory(selectedId),
@@ -209,6 +219,15 @@ export default function App() {
           }
         </div>
       </div>
+
+      {/* Toast notification */}
+      {toast && (
+        <Toast
+          message="Payment link sent successfully"
+          sub="Customer has been notified with a secure payment link."
+          onDismiss={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

@@ -175,6 +175,35 @@ export default function AgentPanel({ caseStatus, agentResult, running, error, on
                 {r.action_result.message && (
                   <MessageWithLink message={r.action_result.message} />
                 )}
+
+                {/* Simulated notification banner */}
+                {r.action_result.notification && (
+                  <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 flex items-start gap-2.5">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" className="flex-shrink-0 mt-[1px]">
+                      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.17 1.18 2 2 0 012.18 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.18 6.18l1.08-1.02a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                    </svg>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-bold text-blue-800 leading-snug">
+                        Payment link sent to customer <span className="ml-1 text-[11px] font-semibold bg-blue-100 text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded">DEMO</span>
+                      </p>
+                      <p className="text-[12px] font-medium text-blue-700 mt-0.5 truncate">
+                        {r.action_result.notification.sent_to}
+                      </p>
+                      {r.action_result.notification.payment_link_url && (
+                        <a
+                          href={r.action_result.notification.payment_link_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[12px] font-semibold text-blue-600 hover:text-blue-800 underline underline-offset-2 break-all leading-relaxed"
+                        >
+                          {r.action_result.notification.payment_link_url}
+                        </a>
+                      )}
+                      <p className="text-[11px] text-blue-500 mt-1">No real notification sent — demo mode only.</p>
+                    </div>
+                  </div>
+                )}
+
                 {r.completed_at && (
                   <p className="mt-1.5 text-[11px] font-medium text-gray-500">Completed {fmtDate(r.completed_at)}</p>
                 )}

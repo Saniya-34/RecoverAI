@@ -725,7 +725,7 @@ def make_policy_gate_node():
 # Node 5: execute_action
 # ──────────────────────────────────────────────────────────────────────────────
 
-def make_execute_action_node(executor_override=None):
+def make_execute_action_node(executor_override=None, db=None):
 
     def execute_action(state: AgentState) -> dict:
 
@@ -998,6 +998,62 @@ def make_execute_action_node(executor_override=None):
                 action_result[
                     "payment_link_url"
                 ] = payment_link_url
+
+            # ── Simulated notification ─────────────────────────────────────
+            #
+            # When a payment link was created (either via Razorpay Test Mode
+            # or the simulated executor) for SEND_PAYMENT_LINK or
+            # RETRY_PAYMENT, simulate sending it to the customer and record
+            # a PAYMENT_LINK_SENT audit entry.
+            #
+            # No real email/SMS/WhatsApp is sent. This is demo-only.
+
+            if (
+                action in {"SEND_PAYMENT_LINK", "RETRY_PAYMENT"}
+                and exec_result.success
+                and (payment_link_url or is_simulated)
+            ):
+                from backend.app.models.customer import Customer as _Customer
+
+                customer_id = context.get("customer_id")
+                customer_obj = db.get(_Customer, customer_id) if customer_id else None
+
+                sent_to = (
+                    customer_obj.email
+                    or customer_obj.phone
+                    or customer_obj.external_customer_id
+                    if customer_obj
+                    else "customer"
+                )
+
+                notification = {
+                    "sent_to": sent_to,
+                    "channel": "email" if (customer_obj and customer_obj.email) else "contact",
+                    "payment_link_url": payment_link_url,
+                    "simulated": True,
+                }
+
+                action_result["notification"] = notification
+
+                audit_events.append(
+                    _audit(
+                        "PAYMENT_LINK_SENT",
+                        {
+                            "sent_to": sent_to,
+                            "payment_link_url": payment_link_url,
+                            "payment_link_id": payment_link_id,
+                            "simulated": True,
+                            "note": "No real notification sent — demo mode only.",
+                        },
+                    )
+                )
+
+                logger.info(
+                    "Simulated notification: payment link sent to '%s' "
+                    "for case_id=%s [DEMO]",
+                    sent_to,
+                    context.get("recovery_case_id"),
+                )
 
             return {
                 "action_result": action_result,
@@ -1574,7 +1630,7 @@ def build_recovery_graph(
 
     graph.add_node(
         "execute_action",
-        make_execute_action_node(executor),
+        make_execute_action_node(executor, db=db),
     )
 
     graph.add_node(
