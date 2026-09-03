@@ -965,6 +965,29 @@ RecoverAI/
 
 ---
 
+## Screenshots
+
+### System Architecture Diagram
+
+![RecoverAI High Level Architecture](docs/architecture/architecture.png)
+
+> Full architecture overview showing the Frontend (React + Vite), Backend (FastAPI), LangGraph Agent Workflow, PostgreSQL Data Model, End-to-End Sequence Flow, External Payment & Webhook Flow, and Deployment Architecture.
+
+### Dashboard Screenshots
+
+> Add dashboard screenshots to the `docs/architecture/` folder and update the paths below.
+
+| View | File |
+|------|------|
+| Main dashboard | `docs/architecture/dashboard.png` |
+| Customer list with filters | `docs/architecture/customer-list.png` |
+| AI recommendation panel | `docs/architecture/ai-recommendation.png` |
+| Payment link + notification banner | `docs/architecture/payment-link.png` |
+| Audit timeline (expanded) | `docs/architecture/audit-timeline.png` |
+| Toast notification | `docs/architecture/toast.png` |
+
+---
+
 ## Future Enhancements
 
 The following capabilities are not currently implemented and are candidates for future development:
